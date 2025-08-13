@@ -14,6 +14,8 @@ func main() {
 	log.Printf("Starting server on address %s", address)
 
 	mux := http.NewServeMux()
+
+	// Fileserver ("Frontend")
 	mux.Handle("/app/",
 		middlewareLogging(
 			cfg.middlewareIncrementViews(
@@ -21,7 +23,12 @@ func main() {
 			),
 		),
 	)
+
+	// API routes
 	mux.Handle("GET /api/healthz", middlewareLogging(http.HandlerFunc(handleHealth)))
+	mux.Handle("POST /api/validate_chirp", middlewareLogging(http.HandlerFunc(handleValidateChirp)))
+
+	// Admin routes
 	mux.Handle("GET /admin/metrics", middlewareLogging(http.HandlerFunc(cfg.handleMetrics)))
 	mux.Handle("POST /admin/reset", middlewareLogging(http.HandlerFunc(cfg.handleReset)))
 
