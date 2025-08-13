@@ -23,7 +23,7 @@ func main() {
 	)
 	mux.Handle("GET /api/healthz", middlewareLogging(http.HandlerFunc(handleHealth)))
 	mux.Handle("GET /admin/metrics", middlewareLogging(http.HandlerFunc(cfg.handleMetrics)))
-	mux.Handle("POST /api/reset", middlewareLogging(http.HandlerFunc(cfg.handleReset)))
+	mux.Handle("POST /admin/reset", middlewareLogging(http.HandlerFunc(cfg.handleReset)))
 
 	server := http.Server{
 		Handler: mux,
