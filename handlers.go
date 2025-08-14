@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sync/atomic"
 )
@@ -41,61 +40,27 @@ func handleValidateChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type respVals struct {
-		Error string `json:"error"`
-		Valid bool   `json:"valid"`
+		Valid bool `json:"valid"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	chirpToValidate := chirp{}
-	respBody := respVals{}
-	err := decoder.Decode(&chirpToValidate)
 
+	err := decoder.Decode(&chirpToValidate)
 	if err != nil {
-		log.Printf("error decoding chirp: %v", err)
-		respBody.Error = "Something went wrong"
-		data, err := json.Marshal(respBody)
-		if err != nil {
-			log.Printf("error marshaling response: %v", err)
-			return
-		}
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(data)
+		respondWithError(w, "Something went wrong", http.StatusInternalServerError, err)
 		return
 	}
 	if chirpToValidate.Body == "" {
-		respBody.Valid = false
-		respBody.Error = "Chirp body is missing"
-		data, err := json.Marshal(respBody)
-		if err != nil {
-			log.Printf("error marshaling response: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(data)
+		respondWithError(w, "Chirp body is missing", http.StatusBadRequest, nil)
 		return
 	}
 	if len(chirpToValidate.Body) > 140 {
-		respBody.Valid = false
-		respBody.Error = "Chirp is too long"
-		data, err := json.Marshal(respBody)
-		if err != nil {
-			log.Printf("error marshaling response: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write(data)
+		respondWithError(w, "Chirp is too long (> 140 chars)", http.StatusBadRequest, nil)
 		return
 	}
 
-	respBody.Valid = true
-	data, err := json.Marshal(respBody)
-	if err != nil {
-		log.Printf("error marshaling response: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	respondWithJSON(w, http.StatusOK, respVals{
+		Valid: true,
+	})
 }
