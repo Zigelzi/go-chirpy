@@ -7,10 +7,6 @@ import (
 	"sync/atomic"
 )
 
-type apiConfig struct {
-	fileServerHits atomic.Int32
-}
-
 func (cfg *apiConfig) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)

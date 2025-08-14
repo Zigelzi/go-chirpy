@@ -6,6 +6,10 @@ import (
 	"sync/atomic"
 )
 
+type apiConfig struct {
+	fileServerHits atomic.Int32
+}
+
 func main() {
 	address := ":8080"
 	cfg := apiConfig{
