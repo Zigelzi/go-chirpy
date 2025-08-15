@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync/atomic"
@@ -28,35 +27,4 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(http.StatusText(http.StatusOK)))
-}
-
-func handleValidateChirp(w http.ResponseWriter, r *http.Request) {
-	type chirp struct {
-		Body string `json:"body"`
-	}
-
-	type respVals struct {
-		Valid bool `json:"valid"`
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	chirpToValidate := chirp{}
-
-	err := decoder.Decode(&chirpToValidate)
-	if err != nil {
-		respondWithError(w, "Something went wrong", http.StatusInternalServerError, err)
-		return
-	}
-	if chirpToValidate.Body == "" {
-		respondWithError(w, "Chirp body is missing", http.StatusBadRequest, nil)
-		return
-	}
-	if len(chirpToValidate.Body) > 140 {
-		respondWithError(w, "Chirp is too long (> 140 chars)", http.StatusBadRequest, nil)
-		return
-	}
-
-	respondWithJSON(w, http.StatusOK, respVals{
-		Valid: true,
-	})
 }
