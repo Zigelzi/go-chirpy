@@ -35,9 +35,14 @@ func TestSensorProfanities(t *testing.T) {
 		},
 	}
 
+	unallowedWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			actualSensoredText := sensorProfanities(testCase.text)
+			actualSensoredText := sensorProfanities(testCase.text, unallowedWords)
 			if actualSensoredText != testCase.expectedSensoredText {
 				t.Errorf("sensored texts don't match: got [%s] want [%s]", actualSensoredText, testCase.expectedSensoredText)
 			}

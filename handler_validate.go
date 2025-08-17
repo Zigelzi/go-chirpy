@@ -6,12 +6,6 @@ import (
 	"strings"
 )
 
-var unallowedWords = []string{
-	"kerfuffle",
-	"sharbert",
-	"fornax",
-}
-
 func handleValidateChirp(w http.ResponseWriter, r *http.Request) {
 	type chirp struct {
 		Body string `json:"body"`
@@ -37,35 +31,26 @@ func handleValidateChirp(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, "Chirp is too long (> 140 chars)", http.StatusBadRequest, nil)
 		return
 	}
-	if hasProfanities(chirpToValidate.Body) {
-		respondWithJSON(w, http.StatusOK, respVals{
-			CleanedBody: sensorProfanities(chirpToValidate.Body),
-		})
-		return
+
+	unallowedWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
 	}
 
+	cleanedBody := sensorProfanities(chirpToValidate.Body, unallowedWords)
+
 	respondWithJSON(w, http.StatusOK, respVals{
-		CleanedBody: chirpToValidate.Body,
+		CleanedBody: cleanedBody,
 	})
 }
 
-func hasProfanities(text string) bool {
-	for _, word := range unallowedWords {
-		if strings.Contains(strings.ToLower(text), word) {
-			return true
-		}
-	}
-
-	return false
-}
-
-func sensorProfanities(text string) string {
+func sensorProfanities(text string, unallowedWords map[string]struct{}) string {
 	words := strings.Split(text, " ")
 	for wordIndex, word := range words {
-		for _, profanity := range unallowedWords {
-			if strings.ToLower(word) == profanity {
-				words[wordIndex] = "****"
-			}
+		lowercaseWord := strings.ToLower(word)
+		if _, ok := unallowedWords[lowercaseWord]; ok {
+			words[wordIndex] = "****"
 		}
 	}
 	sensoredText := strings.Join(words, " ")
