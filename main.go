@@ -46,6 +46,8 @@ func main() {
 	mux.Handle("GET /api/healthz", middlewareLogging(http.HandlerFunc(handleHealth)))
 	mux.Handle("POST /api/validate_chirp", middlewareLogging(http.HandlerFunc(handleValidateChirp)))
 
+	mux.Handle("POST /api/users", middlewareLogging(http.HandlerFunc(cfg.handleCreateUser)))
+
 	// Admin routes
 	mux.Handle("GET /admin/metrics", middlewareLogging(http.HandlerFunc(cfg.handleMetrics)))
 	mux.Handle("POST /admin/reset", middlewareLogging(http.HandlerFunc(cfg.handleReset)))
