@@ -15,6 +15,7 @@ import (
 type apiConfig struct {
 	fileServerHits atomic.Int32
 	db             *database.Queries
+	env            string
 }
 
 func main() {
@@ -28,8 +29,9 @@ func main() {
 	cfg := apiConfig{
 		fileServerHits: atomic.Int32{},
 		db:             database.New(db),
+		env:            os.Getenv("ENVIRONMENT"),
 	}
-	log.Printf("Starting server on address %s", address)
+	log.Printf("Starting server on address %s for environment [%s]", address, cfg.env)
 
 	mux := http.NewServeMux()
 

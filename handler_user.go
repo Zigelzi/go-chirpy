@@ -10,26 +10,35 @@ import (
 )
 
 func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
-	type params struct {
+	type requestData struct {
 		Email string `json:"email"`
+	}
+	type createUserReponse struct {
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Email     string    `json:"email"`
 	}
 	decoder := json.NewDecoder(r.Body)
 
-	requestParams := params{}
-	err := decoder.Decode(&requestParams)
+	userData := requestData{}
+	err := decoder.Decode(&userData)
 	if err != nil {
 		respondWithError(w, "Something went wrong", http.StatusInternalServerError, err)
 		return
 	}
 	newUser, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-		Email:     requestParams.Email,
+		ID:    uuid.New(),
+		Email: userData.Email,
 	})
 	if err != nil {
 		respondWithError(w, "Something went wrong", http.StatusInternalServerError, err)
 		return
 	}
-	respondWithJSON(w, http.StatusCreated, newUser)
+	respondWithJSON(w, http.StatusCreated, createUserReponse{
+		ID:        newUser.ID,
+		CreatedAt: newUser.CreatedAt,
+		UpdatedAt: newUser.UpdatedAt,
+		Email:     newUser.Email,
+	})
 }

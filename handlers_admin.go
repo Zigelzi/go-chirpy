@@ -20,7 +20,24 @@ func (cfg *apiConfig) handleMetrics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handleReset(w http.ResponseWriter, r *http.Request) {
+	type resetResponse struct {
+		DeletedCount int64 `json:"deleted_count"`
+	}
+	if cfg.env != "development" {
+		respondWithError(w, "Resetting only allowed in development environment", http.StatusForbidden, nil)
+		return
+	}
+
+	// Service
 	cfg.fileServerHits = atomic.Int32{}
+	countOfDeletedUsers, err := cfg.db.ResetUsers(r.Context())
+	if err != nil {
+		respondWithError(w, "Failed to reset users", http.StatusInternalServerError, err)
+		return
+	}
+	respondWithJSON(w, http.StatusOK, resetResponse{
+		DeletedCount: countOfDeletedUsers,
+	})
 }
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
