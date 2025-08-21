@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Zigelzi/go-chirpy/internal/database"
@@ -19,20 +21,31 @@ func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt time.Time `json:"updated_at"`
 		Email     string    `json:"email"`
 	}
-	decoder := json.NewDecoder(r.Body)
 
+	decoder := json.NewDecoder(r.Body)
 	userData := requestData{}
 	err := decoder.Decode(&userData)
 	if err != nil {
 		respondWithError(w, "Something went wrong", http.StatusInternalServerError, err)
 		return
 	}
+
+	if strings.TrimSpace(userData.Email) == "" {
+		respondWithError(w, "Email is required field", http.StatusBadRequest, nil)
+		return
+	}
+
+	if !isValidEmail(userData.Email) {
+		respondWithError(w, "Email not in 'example@domain.com' format", http.StatusBadRequest, nil)
+		return
+	}
+
 	newUser, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
 		ID:    uuid.New(),
-		Email: userData.Email,
+		Email: strings.TrimSpace(userData.Email),
 	})
 	if err != nil {
-		respondWithError(w, "Something went wrong", http.StatusInternalServerError, err)
+		respondWithError(w, "Something went wrong and user wasn't created", http.StatusInternalServerError, err)
 		return
 	}
 	respondWithJSON(w, http.StatusCreated, createUserReponse{
@@ -41,4 +54,12 @@ func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: newUser.UpdatedAt,
 		Email:     newUser.Email,
 	})
+}
+
+func isValidEmail(email string) bool {
+	if len(email) > 254 { // RFC 5321 limit
+		return false
+	}
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
 }
