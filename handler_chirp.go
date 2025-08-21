@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Zigelzi/go-chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
@@ -18,7 +19,7 @@ type Chirp struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func handleCreateChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) {
 	type chirpRequestData struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -51,10 +52,23 @@ func handleCreateChirp(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, err.Error(), http.StatusBadRequest, nil)
 		return
 	}
+	newChirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
+		ID:     uuid.New(),
+		Body:   cleanedBody,
+		UserID: requestData.UserID,
+	})
+	if err != nil {
+		respondWithError(w, "Something went wrong when creating new user", http.StatusInternalServerError, err)
+		return
+	}
 
 	respondWithJSON(w, http.StatusCreated, createChirpResponse{
 		Chirp: Chirp{
-			Body: cleanedBody,
+			ID:        newChirp.ID,
+			CreatedAt: newChirp.CreatedAt,
+			UpdatedAt: newChirp.UpdatedAt,
+			Body:      newChirp.Body,
+			UserID:    newChirp.UserID,
 		},
 	})
 }

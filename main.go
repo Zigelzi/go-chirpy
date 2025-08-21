@@ -48,7 +48,7 @@ func main() {
 	mux.Handle("GET /api/healthz", middlewareLogging(http.HandlerFunc(handleHealth)))
 
 	// Chirps
-	mux.Handle("POST /api/chirps/", middlewareLogging(http.HandlerFunc(handleCreateChirp)))
+	mux.Handle("POST /api/chirps/", middlewareLogging(http.HandlerFunc(cfg.handleCreateChirp)))
 
 	// Users
 	mux.Handle("POST /api/users", middlewareLogging(http.HandlerFunc(cfg.handleCreateUser)))
