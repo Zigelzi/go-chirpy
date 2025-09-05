@@ -19,7 +19,32 @@ type Chirp struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func (cfg apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handleGetChirp(w http.ResponseWriter, r *http.Request) {
+	type getChirpsResponse struct {
+		Chirps []Chirp `json:"chirps"`
+	}
+
+	// Service
+	dbChirps, err := cfg.db.GetChirps(r.Context())
+	if err != nil {
+		respondWithError(w, "Failed to get chirps", http.StatusInternalServerError, err)
+	}
+
+	allChirps := []Chirp{}
+	for _, dbChirp := range dbChirps {
+		allChirps = append(allChirps, Chirp{
+			ID:        dbChirp.ID,
+			CreatedAt: dbChirp.CreatedAt,
+			UpdatedAt: dbChirp.UpdatedAt,
+			Body:      dbChirp.Body,
+			UserID:    dbChirp.UserID,
+		})
+	}
+
+	respondWithJSON(w, http.StatusOK, allChirps)
+}
+
+func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) {
 	type chirpRequestData struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -58,7 +83,7 @@ func (cfg apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) {
 		UserID: requestData.UserID,
 	})
 	if err != nil {
-		respondWithError(w, "Something went wrong when creating new user", http.StatusInternalServerError, err)
+		respondWithError(w, "Something went wrong when creating new chirp", http.StatusInternalServerError, err)
 		return
 	}
 

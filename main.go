@@ -49,6 +49,7 @@ func main() {
 
 	// Chirps
 	mux.Handle("POST /api/chirps", middlewareLogging(http.HandlerFunc(cfg.handleCreateChirp)))
+	mux.Handle("GET /api/chirps", middlewareLogging(http.HandlerFunc(cfg.handleGetChirp)))
 
 	// Users
 	mux.Handle("POST /api/users", middlewareLogging(http.HandlerFunc(cfg.handleCreateUser)))
