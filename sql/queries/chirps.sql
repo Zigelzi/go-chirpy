@@ -13,3 +13,11 @@ FROM
     chirps
 ORDER BY
     created_at asc;
+
+-- name: GetChirp :one
+SELECT
+    *
+FROM
+    chirps
+WHERE
+    id = $1;

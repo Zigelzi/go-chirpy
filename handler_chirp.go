@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,7 +21,40 @@ type Chirp struct {
 }
 
 func (cfg *apiConfig) handleGetChirp(w http.ResponseWriter, r *http.Request) {
-	type getChirpsResponse struct {
+	type getChirpResponse struct {
+		Chirp `json:"chirp"`
+	}
+
+	pathChirpID := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(pathChirpID)
+	if err != nil {
+		respondWithError(w, "Parameter must be valid UUID", http.StatusBadRequest, err)
+		return
+	}
+	dbChirp, err := cfg.db.GetChirp(r.Context(), chirpID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondWithError(w, fmt.Sprintf("Chirp with ID %s was not found", chirpID), http.StatusNotFound, err)
+			return
+		}
+		respondWithError(w, "Something went wrong when fetching the chirp", http.StatusInternalServerError, err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK,
+		Chirp{
+			ID:        dbChirp.ID,
+			CreatedAt: dbChirp.CreatedAt,
+			UpdatedAt: dbChirp.UpdatedAt,
+			Body:      dbChirp.Body,
+			UserID:    dbChirp.UserID,
+		},
+	)
+
+}
+
+func (cfg *apiConfig) handleGetAllChirps(w http.ResponseWriter, r *http.Request) {
+	type getAllChirpsResponse struct {
 		Chirps []Chirp `json:"chirps"`
 	}
 
