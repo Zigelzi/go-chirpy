@@ -7,13 +7,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Zigelzi/go-chirpy/internal/auth"
 	"github.com/Zigelzi/go-chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
 func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	type requestData struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type createUserReponse struct {
 		ID        uuid.UUID `json:"id"`
@@ -35,14 +37,31 @@ func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !isValidEmail(userData.Email) {
+	if isInvalidEmail(userData.Email) {
 		respondWithError(w, "Email not in 'example@domain.com' format", http.StatusBadRequest, nil)
 		return
 	}
 
+	if strings.TrimSpace(userData.Password) == "" {
+		respondWithError(w, "Password is required field", http.StatusBadRequest, nil)
+		return
+	}
+
+	if isWeakPassword(userData.Password) {
+		respondWithError(w, "Password is too weak", http.StatusBadRequest, nil)
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(userData.Password)
+	if err != nil {
+		respondWithError(w, "Something went wrong creating an user", http.StatusInternalServerError, err)
+		return
+	}
+
 	newUser, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
-		ID:    uuid.New(),
-		Email: strings.TrimSpace(userData.Email),
+		ID:             uuid.New(),
+		Email:          strings.TrimSpace(userData.Email),
+		HashedPassword: hashedPassword,
 	})
 	if err != nil {
 		respondWithError(w, "Something went wrong and user wasn't created", http.StatusInternalServerError, err)
@@ -56,10 +75,18 @@ func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func isValidEmail(email string) bool {
+func isInvalidEmail(email string) bool {
 	if len(email) > 254 { // RFC 5321 limit
-		return false
+		return true
 	}
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	return emailRegex.MatchString(email)
+	return !emailRegex.MatchString(email)
+}
+
+func isWeakPassword(password string) bool {
+	const minLength = 4
+	if len(password) < minLength {
+		return true
+	}
+	return false
 }
