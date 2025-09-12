@@ -90,3 +90,40 @@ func isWeakPassword(password string) bool {
 	}
 	return false
 }
+
+func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
+	type loginRequestData struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	type loginReponse struct {
+		ID        uuid.UUID `json:"id"`
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+		Email     string    `json:"email"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	userData := loginRequestData{}
+	err := decoder.Decode(&userData)
+	if err != nil {
+		respondWithError(w, "Something went wrong when trying to login the user", http.StatusInternalServerError, err)
+		return
+	}
+	dbUser, err := cfg.db.GetUser(r.Context(), userData.Email)
+	if err != nil {
+		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
+		return
+	}
+	err = auth.CheckHashedPassword(userData.Password, dbUser.HashedPassword)
+	if err != nil {
+		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
+		return
+	}
+	respondWithJSON(w, http.StatusOK, loginReponse{
+		ID:        dbUser.ID,
+		CreatedAt: dbUser.CreatedAt,
+		UpdatedAt: dbUser.UpdatedAt,
+		Email:     dbUser.Email,
+	})
+}
