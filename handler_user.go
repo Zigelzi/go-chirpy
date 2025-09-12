@@ -110,7 +110,7 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, "Something went wrong when trying to login the user", http.StatusInternalServerError, err)
 		return
 	}
-	dbUser, err := cfg.db.GetUser(r.Context(), userData.Email)
+	dbUser, err := cfg.db.GetUserByEmail(r.Context(), userData.Email)
 	if err != nil {
 		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
 		return
