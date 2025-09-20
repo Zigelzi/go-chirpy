@@ -16,20 +16,28 @@ type apiConfig struct {
 	fileServerHits atomic.Int32
 	db             *database.Queries
 	env            string
+	jwtSecret      string
 }
 
 func main() {
 	address := ":8080"
 	godotenv.Load()
+
 	dbURL := os.Getenv("DB_URL")
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("unable to connect to database: %s", err)
 	}
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "development-is-hard"
+	}
 	cfg := apiConfig{
 		fileServerHits: atomic.Int32{},
 		db:             database.New(db),
 		env:            os.Getenv("ENVIRONMENT"),
+		jwtSecret:      jwtSecret,
 	}
 	log.Printf("Starting server on address %s for environment [%s]", address, cfg.env)
 

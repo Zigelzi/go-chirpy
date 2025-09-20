@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -120,6 +121,14 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
 		return
 	}
+
+	jwt, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, time.Hour)
+
+	if err != nil {
+		respondWithError(w, "Something went wrong when trying to login the user", http.StatusInternalServerError, err)
+		return
+	}
+	fmt.Printf("JWT for user: %v\n", jwt)
 	respondWithJSON(w, http.StatusOK, loginReponse{
 		ID:        dbUser.ID,
 		CreatedAt: dbUser.CreatedAt,
