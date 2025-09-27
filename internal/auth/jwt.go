@@ -11,17 +11,18 @@ import (
 const issuerName = "chirpy"
 
 func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
-	jwtIssuedAt := jwt.NewNumericDate(time.Now().UTC())
 	expiresAt := time.Now().UTC().Add(expiresIn)
 	jwtExpiresAt := jwt.NewNumericDate(expiresAt)
-	// log.Printf("JWT issued at: %v", jwtIssuedAt)
-	// log.Printf("JWT expires in: %v (%v)", expiresAt, expiresIn)
+
+	jwtIssuedAt := jwt.NewNumericDate(time.Now().UTC())
 	claims := &jwt.RegisteredClaims{
 		Issuer:    issuerName,
 		IssuedAt:  jwtIssuedAt,
 		ExpiresAt: jwtExpiresAt,
 		Subject:   userID.String(),
 	}
+	// log.Printf("JWT issued at: %v", jwtIssuedAt)
+	// log.Printf("JWT expires in: %v (%v)", expiresAt, expiresIn)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(tokenSecret))

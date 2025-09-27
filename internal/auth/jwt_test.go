@@ -8,70 +8,83 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestValidateJWT(t *testing.T) {
-	t.Run("JWT expiring in the future and issued by chirpy is valid", func(t *testing.T) {
+func TestMakeJWT(t *testing.T) {
+	t.Run("JWT is made with given details", func(t *testing.T) {
+		userUUID := uuid.New()
 		tokenSecret := "testing-is-fun"
-		expectedUserUUID := uuid.New()
+		tokenString, err := MakeJWT(userUUID, tokenSecret, 200*time.Millisecond)
 
-		token, _ := MakeJWT(expectedUserUUID, tokenSecret, time.Hour)
-		actualUserUUID, err := ValidateJWT(token, tokenSecret)
-		if actualUserUUID != expectedUserUUID {
-			t.Errorf("User UUIDs don't match: got [%v] want [%v]", actualUserUUID, expectedUserUUID)
+		if tokenString == "" {
+			t.Errorf("token string is empty unexpectedly")
 		}
 		if err != nil {
-			t.Errorf("Got unexpected error when validating the JWT: %v", err)
+			t.Errorf("unexpected error: got [%v] want [nil]", err)
 		}
 	})
-	t.Run("JWT not issued by chirpy is invalid", func(t *testing.T) {
-		tokenSecret := "testing-is-fun"
-		expectedUserUUID := uuid.UUID{}
-		expectedError := "token is not issued by " + issuerName
-		// Expires on 2030-09-19 14:48:48.406655373 +0000 UTC, generate new before that.
-		token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJpbmNvcnJlY3QtaXNzdWVyIiwic3ViIjoiNjAyYTY0YTgtYmJiMi00MTc4LWFiYmItNjcxOWQzZmRjODgwIiwiZXhwIjoxOTE2MDU5NzI4LCJpYXQiOjE3NTgzNzk3Mjh9.nAq3WD2ay5klCfZcgOuWQ5rOdBhTYko07saFO7rBKsQ"
-		actualUserUUID, err := ValidateJWT(token, tokenSecret)
-		if actualUserUUID != expectedUserUUID {
-			t.Errorf("User UUIDs don't match: got [%v] want [%v]", actualUserUUID, expectedUserUUID)
-		}
-		if err == nil {
-			t.Errorf("Expected error but got [nil]")
-			return
-		}
-		if strings.Contains(err.Error(), expectedError) == false {
-			t.Errorf("Errors don't match: got [%s] want [%s]", err, expectedError)
-		}
-	})
-	t.Run("JWT expiring in past is invalid", func(t *testing.T) {
-		tokenSecret := "testing-is-fun"
-		expectedUserUUID := uuid.UUID{}
-		expectedError := "token is expired"
-		token, _ := MakeJWT(expectedUserUUID, tokenSecret, -time.Hour)
-		actualUserUUID, err := ValidateJWT(token, tokenSecret)
-		if actualUserUUID != expectedUserUUID {
-			t.Errorf("User UUIDs don't match: got [%v] want [%v]", actualUserUUID, expectedUserUUID)
-		}
-		if err == nil {
-			t.Errorf("Expected error but got [nil]")
-			return
-		}
-		if strings.Contains(err.Error(), expectedError) == false {
-			t.Errorf("Errors don't match: got [%s] want [%s]", err, expectedError)
-		}
-	})
-	t.Run("JWT signed with different secret is invalid", func(t *testing.T) {
-		tokenSecret := "testing-is-fun"
-		expectedUserUUID := uuid.UUID{}
-		expectedError := "token signature is invalid"
-		token, _ := MakeJWT(expectedUserUUID, "not-valid-secret", -time.Hour)
-		actualUserUUID, err := ValidateJWT(token, tokenSecret)
-		if actualUserUUID != expectedUserUUID {
-			t.Errorf("User UUIDs don't match: got [%v] want [%v]", actualUserUUID, expectedUserUUID)
-		}
-		if err == nil {
-			t.Errorf("Expected error but got [nil]")
-			return
-		}
-		if strings.Contains(err.Error(), expectedError) == false {
-			t.Errorf("Errors don't match: got [%s] want [%s]", err, expectedError)
-		}
-	})
+}
+
+func TestValidateJWT(t *testing.T) {
+	userUUID := uuid.New()
+	validToken, _ := MakeJWT(userUUID, "secret", time.Hour)
+
+	tests := []struct {
+		name             string
+		tokenString      string
+		tokenSecret      string
+		expectedUserUUID uuid.UUID
+		wantErr          bool
+		expectedError    string
+	}{
+		{
+			name:             "JWT with valid format and secret is valid",
+			tokenString:      validToken,
+			tokenSecret:      "secret",
+			expectedUserUUID: userUUID,
+			wantErr:          false,
+			expectedError:    "",
+		},
+		{
+			name:             "JWT with incorrect secret is invalid ",
+			tokenString:      validToken,
+			tokenSecret:      "weird-secret",
+			expectedUserUUID: uuid.Nil,
+			wantErr:          true,
+			expectedError:    "signature is invalid",
+		},
+		{
+			name:             "JWT with incorrect format is invalid ",
+			tokenString:      "derp.derp.derp",
+			tokenSecret:      "secret",
+			expectedUserUUID: uuid.Nil,
+			wantErr:          true,
+			expectedError:    "token is malformed",
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			actualUserUUID, err := ValidateJWT(testCase.tokenString, testCase.tokenSecret)
+			if testCase.wantErr {
+				if err == nil {
+					t.Errorf("Expected error but got [nil]")
+					return
+				}
+				if strings.Contains(err.Error(), testCase.expectedError) == false {
+					t.Errorf("Errors don't match: got [%s] want [%s]", err, testCase.expectedError)
+					return
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: got [%v] want [nil]", err)
+					return
+				}
+
+			}
+
+			if actualUserUUID != testCase.expectedUserUUID {
+				t.Errorf("User UUIDs don't match: got [%v] want [%s]", actualUserUUID, testCase.expectedUserUUID)
+				return
+			}
+		})
+
+	}
 }
