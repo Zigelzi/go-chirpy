@@ -1,10 +1,11 @@
 package auth
 
 import (
-	"strings"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -23,52 +24,78 @@ func TestMakeJWT(t *testing.T) {
 	})
 }
 
-func TestValidateJWT(t *testing.T) {
+func TestUserAuthentication(t *testing.T) {
 	userUUID := uuid.New()
 	validToken, _ := MakeJWT(userUUID, "secret", time.Hour)
+	expiredToken, _ := MakeJWT(userUUID, "secret", -time.Hour)
+	tokenWithDifferentIssuer := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJub3QtY2hpcnB5Iiwic3ViIjoiZTJjZGE1ZGEtM2IxNy00MjZhLWE0MDgtZmZmNWI5ZDJjYTZkIiwiZXhwIjoxNzU4OTc0NDIyLCJpYXQiOjE3NTg5NzA4MjJ9.yGu8VCeY8C5xJJi9D1dlSeXb0PFkYB2f1CKLWS9zC48"
 
 	tests := []struct {
-		name             string
+		scenario         string
 		tokenString      string
 		tokenSecret      string
 		expectedUserUUID uuid.UUID
-		wantErr          bool
-		expectedError    string
+		shouldErr        bool
+		expectedError    error
 	}{
 		{
-			name:             "JWT with valid format and secret is valid",
+			scenario:         "succeeds with correct token and valid secret",
 			tokenString:      validToken,
 			tokenSecret:      "secret",
 			expectedUserUUID: userUUID,
-			wantErr:          false,
-			expectedError:    "",
+			shouldErr:        false,
+			expectedError:    nil,
 		},
 		{
-			name:             "JWT with incorrect secret is invalid ",
+			scenario:         "fails when token secret is incorrect",
 			tokenString:      validToken,
 			tokenSecret:      "weird-secret",
 			expectedUserUUID: uuid.Nil,
-			wantErr:          true,
-			expectedError:    "signature is invalid",
+			shouldErr:        true,
+			expectedError:    jwt.ErrSignatureInvalid,
 		},
 		{
-			name:             "JWT with incorrect format is invalid ",
+			scenario:         "fails when token is incorrectly formatted",
 			tokenString:      "derp.derp.derp",
 			tokenSecret:      "secret",
 			expectedUserUUID: uuid.Nil,
-			wantErr:          true,
-			expectedError:    "token is malformed",
+			shouldErr:        true,
+			expectedError:    jwt.ErrTokenMalformed,
+		},
+		{
+			scenario:         "fails when token is empty",
+			tokenString:      "",
+			tokenSecret:      "secret",
+			expectedUserUUID: uuid.Nil,
+			shouldErr:        true,
+			expectedError:    jwt.ErrTokenMalformed,
+		},
+		{
+			scenario:         "fails when token is expired",
+			tokenString:      expiredToken,
+			tokenSecret:      "secret",
+			expectedUserUUID: uuid.Nil,
+			shouldErr:        true,
+			expectedError:    jwt.ErrTokenExpired,
+		},
+		{
+			scenario:         "fails when token is not issued by chirpy",
+			tokenString:      tokenWithDifferentIssuer,
+			tokenSecret:      "secret",
+			expectedUserUUID: uuid.Nil,
+			shouldErr:        true,
+			expectedError:    ErrIncorrectIssuer,
 		},
 	}
 	for _, testCase := range tests {
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Run(testCase.scenario, func(t *testing.T) {
 			actualUserUUID, err := ValidateJWT(testCase.tokenString, testCase.tokenSecret)
-			if testCase.wantErr {
+			if testCase.shouldErr {
 				if err == nil {
 					t.Errorf("Expected error but got [nil]")
 					return
 				}
-				if strings.Contains(err.Error(), testCase.expectedError) == false {
+				if errors.Is(err, testCase.expectedError) == false {
 					t.Errorf("Errors don't match: got [%s] want [%s]", err, testCase.expectedError)
 					return
 				}

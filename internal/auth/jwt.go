@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,6 +10,10 @@ import (
 )
 
 const issuerName = "chirpy"
+
+var (
+	ErrIncorrectIssuer = errors.New("token is not issued by " + issuerName)
+)
 
 func MakeJWT(userID uuid.UUID, tokenSecret string, expiresIn time.Duration) (string, error) {
 	expiresAt := time.Now().UTC().Add(expiresIn)
@@ -48,7 +53,7 @@ func ValidateJWT(tokenString, tokenSecret string) (uuid.UUID, error) {
 		}
 
 		if claims.Issuer != issuerName {
-			return uuid.UUID{}, fmt.Errorf("token is not issued by %s: %w", issuerName, err)
+			return uuid.UUID{}, ErrIncorrectIssuer
 		}
 
 	}
