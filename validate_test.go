@@ -2,34 +2,34 @@ package main
 
 import "testing"
 
-func TestSensorProfanities(t *testing.T) {
+func TestChirpProfanityFiltering(t *testing.T) {
 	testCases := []struct {
-		name                 string
+		scenario             string
 		text                 string
 		expectedSensoredText string
 	}{
 		{
-			name:                 "sentence without profanities isn't sensored",
+			scenario:             "allows clean chirp to pass through unchanged",
 			text:                 "this is example chirp without profanities",
 			expectedSensoredText: "this is example chirp without profanities",
 		},
 		{
-			name:                 "sentence with single lowercase profanity is sensored",
+			scenario:             "censors lowercase profanity",
 			text:                 "this is example chirp with kerfuffle",
 			expectedSensoredText: "this is example chirp with ****",
 		},
 		{
-			name:                 "sentence with single uppercase profanity is sensored",
+			scenario:             "cencors uppercase profanity",
 			text:                 "this is example chirp with KERFUFFLE",
 			expectedSensoredText: "this is example chirp with ****",
 		},
 		{
-			name:                 "sentence with single capitalized profanity is sensored",
+			scenario:             "cencors capitalized profanity",
 			text:                 "this is example chirp with Kerfuffle",
 			expectedSensoredText: "this is example chirp with ****",
 		},
 		{
-			name:                 "sentence with two different profanities is sensored",
+			scenario:             "cencors multiple profanities in single chirp",
 			text:                 "this is example chirp with Kerfuffle and sharbert",
 			expectedSensoredText: "this is example chirp with **** and ****",
 		},
@@ -41,7 +41,7 @@ func TestSensorProfanities(t *testing.T) {
 		"fornax":    {},
 	}
 	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+		t.Run(testCase.scenario, func(t *testing.T) {
 			actualSensoredText := sensorProfanities(testCase.text, unallowedWords)
 			if actualSensoredText != testCase.expectedSensoredText {
 				t.Errorf("sensored texts don't match: got [%s] want [%s]", actualSensoredText, testCase.expectedSensoredText)
