@@ -1,9 +1,17 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	ErrNoAuthorizationHeader = errors.New("header is missing authorization key")
+	ErrNoTokenString         = errors.New("authorization header is missing the token string")
 )
 
 func HashPassword(password string) (string, error) {
@@ -16,4 +24,18 @@ func HashPassword(password string) (string, error) {
 
 func CheckHashedPassword(password, hash string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+}
+
+func GetBearerToken(headers http.Header) (string, error) {
+	authorizationHeader, ok := headers["Authorization"]
+
+	if ok == false {
+		return "", ErrNoAuthorizationHeader
+	}
+	if len(authorizationHeader) < 2 {
+		return "", ErrNoTokenString
+	}
+
+	tokenString := strings.TrimSpace(authorizationHeader[1])
+	return tokenString, nil
 }

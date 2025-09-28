@@ -105,18 +105,18 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	userData := loginRequestData{}
-	err := decoder.Decode(&userData)
+	loginData := loginRequestData{}
+	err := decoder.Decode(&loginData)
 	if err != nil {
 		respondWithError(w, "Something went wrong when trying to login the user", http.StatusInternalServerError, err)
 		return
 	}
-	dbUser, err := cfg.db.GetUserByEmail(r.Context(), userData.Email)
+	dbUser, err := cfg.db.GetUserByEmail(r.Context(), loginData.Email)
 	if err != nil {
 		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
 		return
 	}
-	err = auth.CheckHashedPassword(userData.Password, dbUser.HashedPassword)
+	err = auth.CheckHashedPassword(loginData.Password, dbUser.HashedPassword)
 	if err != nil {
 		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
 		return
