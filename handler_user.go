@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -94,14 +93,16 @@ func isWeakPassword(password string) bool {
 
 func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	type loginRequestData struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email            string        `json:"email"`
+		Password         string        `json:"password"`
+		ExpiresInSeconds time.Duration `json:"expires_in_seconds"`
 	}
 	type loginReponse struct {
 		ID        uuid.UUID `json:"id"`
 		CreatedAt time.Time `json:"created_at"`
 		UpdatedAt time.Time `json:"updated_at"`
 		Email     string    `json:"email"`
+		Token     string    `json:"token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -122,17 +123,18 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, time.Hour)
+	tokenLifetime := auth.SetTokenLifetime(loginData.ExpiresInSeconds)
+	userToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, tokenLifetime)
 
 	if err != nil {
 		respondWithError(w, "Something went wrong when trying to login the user", http.StatusInternalServerError, err)
 		return
 	}
-	fmt.Printf("JWT for user: %v\n", jwt)
 	respondWithJSON(w, http.StatusOK, loginReponse{
 		ID:        dbUser.ID,
 		CreatedAt: dbUser.CreatedAt,
 		UpdatedAt: dbUser.UpdatedAt,
 		Email:     dbUser.Email,
+		Token:     userToken,
 	})
 }

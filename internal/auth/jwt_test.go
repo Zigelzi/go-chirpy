@@ -115,3 +115,33 @@ func TestAuthenticationTokenValidation(t *testing.T) {
 
 	}
 }
+
+func TestTokenLifetimeConstraints(t *testing.T) {
+	tests := []struct {
+		scenario              string
+		expiresIn             time.Duration
+		expectedTokenLifetime time.Duration
+	}{
+		{
+			scenario:              "allows requested lifetime when within the maximum limit",
+			expiresIn:             30 * time.Minute,
+			expectedTokenLifetime: 30 * time.Minute,
+		},
+		{
+			scenario:              "caps requested lifetime to the maximum limit",
+			expiresIn:             2 * time.Hour,
+			expectedTokenLifetime: time.Hour,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.scenario, func(t *testing.T) {
+			actualTokenLifetime := SetTokenLifetime(testCase.expiresIn)
+			if actualTokenLifetime != testCase.expectedTokenLifetime {
+				t.Errorf("token lifetimes don't match: got [%v] want [%v]", actualTokenLifetime, testCase.expectedTokenLifetime)
+				return
+			}
+
+		})
+	}
+}
