@@ -24,11 +24,11 @@ func TestMakeJWT(t *testing.T) {
 	})
 }
 
-func TestUserAuthentication(t *testing.T) {
+func TestAuthenticationTokenValidation(t *testing.T) {
 	userUUID := uuid.New()
 	validToken, _ := MakeJWT(userUUID, "secret", time.Hour)
 	expiredToken, _ := MakeJWT(userUUID, "secret", -time.Hour)
-	tokenWithDifferentIssuer := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJub3QtY2hpcnB5Iiwic3ViIjoiZTJjZGE1ZGEtM2IxNy00MjZhLWE0MDgtZmZmNWI5ZDJjYTZkIiwiZXhwIjoxNzU4OTc0NDIyLCJpYXQiOjE3NTg5NzA4MjJ9.yGu8VCeY8C5xJJi9D1dlSeXb0PFkYB2f1CKLWS9zC48"
+	tokenWithDifferentIssuer := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJub3QtY2hpcnB5Iiwic3ViIjoiYzIyOGFmOWMtODM1OC00OWJmLTg1NGYtMGQ5MTJmOTNkMTY4IiwiZXhwIjoxOTE0NTc2NTg4LCJpYXQiOjE3NTkwNTY1ODh9.uvnGQ-w_f-iSDSUS1UUsYPujAjRaeDDfTJV-SvfjQuk"
 
 	tests := []struct {
 		scenario         string
@@ -39,7 +39,7 @@ func TestUserAuthentication(t *testing.T) {
 		expectedError    error
 	}{
 		{
-			scenario:         "succeeds with correct token and valid secret",
+			scenario:         "accepts unexpired token with valid secret and issued by chirpy",
 			tokenString:      validToken,
 			tokenSecret:      "secret",
 			expectedUserUUID: userUUID,
@@ -47,7 +47,7 @@ func TestUserAuthentication(t *testing.T) {
 			expectedError:    nil,
 		},
 		{
-			scenario:         "fails when token secret is incorrect",
+			scenario:         "rejects token when secret is incorrect",
 			tokenString:      validToken,
 			tokenSecret:      "weird-secret",
 			expectedUserUUID: uuid.Nil,
@@ -55,7 +55,7 @@ func TestUserAuthentication(t *testing.T) {
 			expectedError:    jwt.ErrSignatureInvalid,
 		},
 		{
-			scenario:         "fails when token is incorrectly formatted",
+			scenario:         "rejects incorrectly formatted token",
 			tokenString:      "derp.derp.derp",
 			tokenSecret:      "secret",
 			expectedUserUUID: uuid.Nil,
@@ -63,7 +63,7 @@ func TestUserAuthentication(t *testing.T) {
 			expectedError:    jwt.ErrTokenMalformed,
 		},
 		{
-			scenario:         "fails when token is empty",
+			scenario:         "rejects empty token",
 			tokenString:      "",
 			tokenSecret:      "secret",
 			expectedUserUUID: uuid.Nil,
@@ -71,7 +71,7 @@ func TestUserAuthentication(t *testing.T) {
 			expectedError:    jwt.ErrTokenMalformed,
 		},
 		{
-			scenario:         "fails when token is expired",
+			scenario:         "rejects expired token",
 			tokenString:      expiredToken,
 			tokenSecret:      "secret",
 			expectedUserUUID: uuid.Nil,
@@ -79,7 +79,7 @@ func TestUserAuthentication(t *testing.T) {
 			expectedError:    jwt.ErrTokenExpired,
 		},
 		{
-			scenario:         "fails when token is not issued by chirpy",
+			scenario:         "rejects token that is not issued by chirpy",
 			tokenString:      tokenWithDifferentIssuer,
 			tokenSecret:      "secret",
 			expectedUserUUID: uuid.Nil,
