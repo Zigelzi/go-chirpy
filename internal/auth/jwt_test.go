@@ -132,6 +132,11 @@ func TestTokenLifetimeConstraints(t *testing.T) {
 			expiresIn:             2 * time.Hour,
 			expectedTokenLifetime: time.Hour,
 		},
+		{
+			scenario:              "sets lifetime to minimum if it is not provided",
+			expiresIn:             0,
+			expectedTokenLifetime: time.Hour,
+		},
 	}
 
 	for _, testCase := range tests {

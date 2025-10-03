@@ -50,11 +50,16 @@ func GetBearerToken(headers http.Header) (string, error) {
 	return tokenString, nil
 }
 
-func SetTokenLifetime(lifetime time.Duration) time.Duration {
+func SetTokenLifetime(requestedLifetime time.Duration) time.Duration {
 	const maxLifetime = time.Hour
+	const defaultMinLifetime = time.Hour
+	const minLifetime = 0
 
-	if lifetime > maxLifetime {
+	if requestedLifetime <= minLifetime {
+		return defaultMinLifetime
+	}
+	if requestedLifetime > maxLifetime {
 		return maxLifetime
 	}
-	return lifetime
+	return requestedLifetime
 }
