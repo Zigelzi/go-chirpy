@@ -20,7 +20,17 @@ func TestParsingAuthenticationToken(t *testing.T) {
 			scenario: "extracts token from valid authorization header",
 			headers: http.Header{
 				"Content-Type":  []string{"application/json"},
-				"Authorization": []string{"Bearer", "this.is.jwt.token"},
+				"Authorization": []string{"Bearer this.is.jwt.token"},
+			},
+			expectedTokenString: "this.is.jwt.token",
+			shouldErr:           false,
+			expectedErr:         nil,
+		},
+		{
+			scenario: "extracts token from valid authorization header and trims the whitespaces",
+			headers: http.Header{
+				"Content-Type":  []string{"application/json"},
+				"Authorization": []string{"Bearer this.is.jwt.token      "},
 			},
 			expectedTokenString: "this.is.jwt.token",
 			shouldErr:           false,

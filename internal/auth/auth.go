@@ -30,14 +30,18 @@ func CheckHashedPassword(password, hash string) error {
 func GetBearerToken(headers http.Header) (string, error) {
 	authorizationHeader, ok := headers["Authorization"]
 
-	if ok == false {
+	if !ok {
 		return "", ErrNoAuthorizationHeader
 	}
-	if len(authorizationHeader) < 2 {
+
+	if len(authorizationHeader) < 1 {
 		return "", ErrNoTokenString
 	}
-
-	tokenString := strings.TrimSpace(authorizationHeader[1])
+	stringsInHeader := strings.Split(authorizationHeader[0], " ")
+	if len(stringsInHeader) < 2 {
+		return "", ErrNoTokenString
+	}
+	tokenString := strings.TrimSpace(stringsInHeader[1])
 	return tokenString, nil
 }
 

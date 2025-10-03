@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Zigelzi/go-chirpy/internal/auth"
 	"github.com/Zigelzi/go-chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -87,10 +88,20 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 	type createChirpResponse struct {
 		Chirp
 	}
+	authToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, "authorization token is missing", http.StatusBadRequest, err)
+		return
+	}
+	userUUID, err := auth.ValidateJWT(authToken, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, "invalid authorization token", http.StatusUnauthorized, err)
+		return
+	}
 
 	decoder := json.NewDecoder(r.Body)
 	requestData := chirpRequestData{}
-	err := decoder.Decode(&requestData)
+	err = decoder.Decode(&requestData)
 	if err != nil {
 		respondWithError(w, "Something went wrong", http.StatusInternalServerError, err)
 		return
@@ -98,10 +109,6 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 
 	if strings.TrimSpace(requestData.Body) == "" {
 		respondWithError(w, "Chirp body can't be empty", http.StatusBadRequest, nil)
-		return
-	}
-	if requestData.UserID == uuid.Nil {
-		respondWithError(w, "User ID can't be empty", http.StatusBadRequest, nil)
 		return
 	}
 
@@ -114,7 +121,7 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 	newChirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		ID:     uuid.New(),
 		Body:   cleanedBody,
-		UserID: requestData.UserID,
+		UserID: userUUID,
 	})
 	if err != nil {
 		respondWithError(w, "Something went wrong when creating new chirp", http.StatusInternalServerError, err)
