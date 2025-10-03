@@ -122,7 +122,6 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
 		return
 	}
-
 	tokenLifetime := auth.SetTokenLifetime(loginData.ExpiresInSeconds)
 	userToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, tokenLifetime)
 

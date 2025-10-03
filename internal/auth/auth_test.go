@@ -46,14 +46,24 @@ func TestParsingAuthenticationToken(t *testing.T) {
 			expectedErr:         ErrNoAuthorizationHeader,
 		},
 		{
-			scenario: "rejects authorization header without token string",
+			scenario: "rejects authorization header without credentials",
 			headers: http.Header{
 				"Content-Type":  []string{"application/json"},
 				"Authorization": []string{"Bearer"},
 			},
 			expectedTokenString: "",
 			shouldErr:           true,
-			expectedErr:         ErrNoTokenString,
+			expectedErr:         ErrNoAuthorizationCredentials,
+		},
+		{
+			scenario: "rejects authorization header without type",
+			headers: http.Header{
+				"Content-Type":  []string{"application/json"},
+				"Authorization": []string{"this.is.jwt.token"},
+			},
+			expectedTokenString: "",
+			shouldErr:           true,
+			expectedErr:         ErrNoAuthorizationType,
 		},
 	}
 	for _, testCase := range tests {

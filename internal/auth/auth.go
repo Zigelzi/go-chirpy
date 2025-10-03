@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	ErrNoAuthorizationHeader = errors.New("header is missing authorization key")
-	ErrNoTokenString         = errors.New("authorization header is missing the token string")
+	ErrNoAuthorizationHeader      = errors.New("header is missing authorization key")
+	ErrNoAuthorizationCredentials = errors.New("authorization header is missing credentials")
+	ErrNoAuthorizationType        = errors.New("authorization header is missing type")
 )
 
 func HashPassword(password string) (string, error) {
@@ -28,6 +29,7 @@ func CheckHashedPassword(password, hash string) error {
 }
 
 func GetBearerToken(headers http.Header) (string, error) {
+	const authorizationType = "Bearer"
 	authorizationHeader, ok := headers["Authorization"]
 
 	if !ok {
@@ -35,11 +37,14 @@ func GetBearerToken(headers http.Header) (string, error) {
 	}
 
 	if len(authorizationHeader) < 1 {
-		return "", ErrNoTokenString
+		return "", ErrNoAuthorizationCredentials
 	}
 	stringsInHeader := strings.Split(authorizationHeader[0], " ")
+	if stringsInHeader[0] != authorizationType {
+		return "", ErrNoAuthorizationType
+	}
 	if len(stringsInHeader) < 2 {
-		return "", ErrNoTokenString
+		return "", ErrNoAuthorizationCredentials
 	}
 	tokenString := strings.TrimSpace(stringsInHeader[1])
 	return tokenString, nil
