@@ -109,7 +109,7 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	loginData := loginRequestData{}
 	err := decoder.Decode(&loginData)
 	if err != nil {
-		respondWithError(w, "Something went wrong when trying to login the user", http.StatusInternalServerError, err)
+		respondWithError(w, "Request body must be valid JSON ", http.StatusBadRequest, err)
 		return
 	}
 	dbUser, err := cfg.db.GetUserByEmail(r.Context(), loginData.Email)
@@ -122,13 +122,15 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
 		return
 	}
-	tokenLifetime := auth.SetTokenLifetime(loginData.ExpiresInSeconds)
-	userToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, tokenLifetime)
 
+	tokenLifetime := auth.SetTokenLifetime(loginData.ExpiresInSeconds)
+
+	userToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, tokenLifetime)
 	if err != nil {
-		respondWithError(w, "Something went wrong when trying to login the user", http.StatusInternalServerError, err)
+		respondWithError(w, "Unexpected errors when logging in the user", http.StatusInternalServerError, err)
 		return
 	}
+
 	respondWithJSON(w, http.StatusOK, loginReponse{
 		ID:        dbUser.ID,
 		CreatedAt: dbUser.CreatedAt,

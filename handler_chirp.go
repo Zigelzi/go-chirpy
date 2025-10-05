@@ -90,12 +90,12 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 	}
 	authToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, "authorization token is missing", http.StatusBadRequest, err)
+		respondWithError(w, "Authorization token is missing", http.StatusBadRequest, err)
 		return
 	}
 	userUUID, err := auth.ValidateJWT(authToken, cfg.jwtSecret)
 	if err != nil {
-		respondWithError(w, "invalid authorization token", http.StatusUnauthorized, err)
+		respondWithError(w, "Invalid authorization token", http.StatusUnauthorized, err)
 		return
 	}
 
