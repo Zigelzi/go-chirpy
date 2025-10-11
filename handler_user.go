@@ -93,9 +93,8 @@ func isWeakPassword(password string) bool {
 
 func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	type loginRequestData struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	type loginReponse struct {
 		ID           uuid.UUID `json:"id"`
@@ -127,10 +126,7 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Access tokens always expire in one hour
-	accessTokenLifetime := auth.SetTokenLifetime(time.Duration(loginData.ExpiresInSeconds) * time.Second)
-
-	accessToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, accessTokenLifetime)
+	accessToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, time.Hour)
 	if err != nil {
 		respondWithError(w, "Unexpected error when logging in the user", http.StatusInternalServerError, err)
 		return

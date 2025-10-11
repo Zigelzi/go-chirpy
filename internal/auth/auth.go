@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -46,20 +45,6 @@ func GetBearerToken(headers http.Header) (string, error) {
 	}
 	tokenString := strings.TrimSpace(stringsInHeader[1])
 	return tokenString, nil
-}
-
-func SetTokenLifetime(requestedLifetime time.Duration) time.Duration {
-	const maxLifetime = time.Hour
-	const defaultMinLifetime = time.Hour
-	const minLifetime = 0
-
-	if requestedLifetime <= minLifetime {
-		return defaultMinLifetime
-	}
-	if requestedLifetime > maxLifetime {
-		return maxLifetime
-	}
-	return requestedLifetime
 }
 
 func MakeRefreshToken() (string, error) {
