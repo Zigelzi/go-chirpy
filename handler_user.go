@@ -98,11 +98,12 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		ExpiresInSeconds int    `json:"expires_in_seconds"`
 	}
 	type loginReponse struct {
-		ID        uuid.UUID `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Email     string    `json:"email"`
-		Token     string    `json:"token"`
+		ID           uuid.UUID `json:"id"`
+		CreatedAt    time.Time `json:"created_at"`
+		UpdatedAt    time.Time `json:"updated_at"`
+		Email        string    `json:"email"`
+		Token        string    `json:"token"`
+		RefreshToken string    `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -126,6 +127,7 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Access tokens always expire in one hour
 	accessTokenLifetime := auth.SetTokenLifetime(time.Duration(loginData.ExpiresInSeconds) * time.Second)
 
 	accessToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, accessTokenLifetime)
@@ -134,11 +136,24 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// User gets refresh token to reduce the number of logins in the future.
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, "Unexpected error when logging in the user", http.StatusInternalServerError, err)
+		return
+	}
+	// Refresh token is stored in the server and always beongs to one user
+	// One user can have only one active refresh token at once.
+
+	// Refresh token always expires after 60 days.
+	// Refresh token can be revoked.
+
 	respondWithJSON(w, http.StatusOK, loginReponse{
-		ID:        dbUser.ID,
-		CreatedAt: dbUser.CreatedAt,
-		UpdatedAt: dbUser.UpdatedAt,
-		Email:     dbUser.Email,
-		Token:     accessToken,
+		ID:           dbUser.ID,
+		CreatedAt:    dbUser.CreatedAt,
+		UpdatedAt:    dbUser.UpdatedAt,
+		Email:        dbUser.Email,
+		Token:        accessToken,
+		RefreshToken: refreshToken,
 	})
 }

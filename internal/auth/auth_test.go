@@ -93,3 +93,19 @@ func TestParsingAuthenticationToken(t *testing.T) {
 		})
 	}
 }
+
+func TestAuthenticationRefreshTokenGeneration(t *testing.T) {
+	refreshToken1, _ := MakeRefreshToken()
+	refreshToken2, _ := MakeRefreshToken()
+	const expectedTokenLength = 64
+
+	if refreshToken1 == refreshToken2 {
+		t.Errorf("two identical tokens were created: token 1 [%s], token 2 [%s]", refreshToken1, refreshToken2)
+		return
+	}
+
+	if len(refreshToken1) != expectedTokenLength {
+		t.Errorf("token is incorrect length: got [%d] want [%d]", len(refreshToken1), expectedTokenLength)
+		return
+	}
+}

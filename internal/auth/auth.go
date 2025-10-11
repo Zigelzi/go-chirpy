@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -58,4 +60,12 @@ func SetTokenLifetime(requestedLifetime time.Duration) time.Duration {
 		return maxLifetime
 	}
 	return requestedLifetime
+}
+
+func MakeRefreshToken() (string, error) {
+	// Generate 32 byte token that is always different length.
+	tokenBytes := make([]byte, 32)
+	rand.Read(tokenBytes)
+	hexToken := hex.EncodeToString(tokenBytes)
+	return hexToken, nil
 }
