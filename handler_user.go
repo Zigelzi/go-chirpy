@@ -112,22 +112,25 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, "Request body must be valid JSON ", http.StatusBadRequest, err)
 		return
 	}
+
 	dbUser, err := cfg.db.GetUserByEmail(r.Context(), loginData.Email)
 	if err != nil {
 		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
 		return
 	}
+
+	// Service starts here?
 	err = auth.CheckHashedPassword(loginData.Password, dbUser.HashedPassword)
 	if err != nil {
 		respondWithError(w, "Incorrect email or password", http.StatusUnauthorized, err)
 		return
 	}
 
-	tokenLifetime := auth.SetTokenLifetime(time.Duration(loginData.ExpiresInSeconds) * time.Second)
+	accessTokenLifetime := auth.SetTokenLifetime(time.Duration(loginData.ExpiresInSeconds) * time.Second)
 
-	userToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, tokenLifetime)
+	accessToken, err := auth.MakeJWT(dbUser.ID, cfg.jwtSecret, accessTokenLifetime)
 	if err != nil {
-		respondWithError(w, "Unexpected errors when logging in the user", http.StatusInternalServerError, err)
+		respondWithError(w, "Unexpected error when logging in the user", http.StatusInternalServerError, err)
 		return
 	}
 
@@ -136,6 +139,6 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: dbUser.CreatedAt,
 		UpdatedAt: dbUser.UpdatedAt,
 		Email:     dbUser.Email,
-		Token:     userToken,
+		Token:     accessToken,
 	})
 }
