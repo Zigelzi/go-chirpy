@@ -1,7 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"regexp"
@@ -175,5 +177,45 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Email:        dbUser.Email,
 		Token:        accessToken,
 		RefreshToken: refreshToken,
+	})
+}
+
+func (cfg *apiConfig) handleRefreshAccessToken(w http.ResponseWriter, r *http.Request) {
+	/*
+		User can get new access token with valid refresh token.
+		--
+		You need to provide refresh token in the Authorization request header.
+		You can get new access token in the response body, when the refresh token is valid
+		Valid refresh token exists in the DB, is not expired and is not revoked.
+		You can get feedback what is wrong, if you don't provide refresh token in the header or
+		it's not in expected format or with expected content.
+		You get unauthorized response, when the refresh token is invalid.
+	*/
+	type refreshAccessTokenResponse struct {
+		Token string `json:"token"`
+	}
+	refreshToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, "Unexpected error when refreshing the access token", http.StatusInternalServerError, err)
+		return
+	}
+	log.Printf("Refreshing access token with refresh token: %s", refreshToken)
+	userId, err := cfg.db.GetUserFromValidRefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, "", http.StatusUnauthorized, err)
+			return
+		}
+		respondWithError(w, "Unexpected error when refreshing the access token", http.StatusInternalServerError, err)
+		return
+	}
+	accessToken, err := auth.MakeJWT(userId, cfg.jwtSecret, time.Hour)
+	if err != nil {
+		respondWithError(w, "Unexpected error when refreshing the access token", http.StatusInternalServerError, err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, refreshAccessTokenResponse{
+		Token: accessToken,
 	})
 }

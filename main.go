@@ -63,6 +63,7 @@ func main() {
 	// Users
 	mux.Handle("POST /api/users", middlewareLogging(http.HandlerFunc(cfg.handleCreateUser)))
 	mux.Handle("POST /api/login", middlewareLogging(http.HandlerFunc(cfg.handleLogin)))
+	mux.Handle("POST /api/refresh", middlewareLogging(http.HandlerFunc(cfg.handleRefreshAccessToken)))
 
 	// Admin routes
 	mux.Handle("GET /admin/metrics", middlewareLogging(http.HandlerFunc(cfg.handleMetrics)))
