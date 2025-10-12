@@ -188,7 +188,7 @@ func (cfg *apiConfig) handleRefreshAccessToken(w http.ResponseWriter, r *http.Re
 		You can get new access token in the response body, when the refresh token is valid
 		Valid refresh token exists in the DB, is not expired and is not revoked.
 		You can get feedback what is wrong, if you don't provide refresh token in the header or
-		it's not in expected format or with expected content.
+		it's not in expected format or without expected content.
 		You get unauthorized response, when the refresh token is invalid.
 	*/
 	type refreshAccessTokenResponse struct {
@@ -218,4 +218,30 @@ func (cfg *apiConfig) handleRefreshAccessToken(w http.ResponseWriter, r *http.Re
 	respondWithJSON(w, http.StatusOK, refreshAccessTokenResponse{
 		Token: accessToken,
 	})
+}
+
+func (cfg *apiConfig) handleRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
+	/*
+		User can revoke the refresh token (log out from all devices).
+
+		You need to provide refresh token in the Authorization header.
+		Active refresh token is revoked, if it exists in database.
+		You can't use revoked refresh token to generate new access tokens.
+		You can get feedback what is wrong, if you don't provide refresh token in the header or
+		it's not in expected format or without expected content.
+	*/
+
+	refreshToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, "Unexpected error when revoking the refresh token", http.StatusInternalServerError, err)
+		return
+	}
+	log.Printf("Revoking refresh token: %s", refreshToken)
+	err = cfg.db.RevokeRefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		respondWithError(w, "Unexpected error when revoking the refresh token", http.StatusInternalServerError, err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusNoContent, struct{}{})
 }
