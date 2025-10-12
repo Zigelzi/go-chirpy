@@ -133,16 +133,29 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// User gets refresh token to reduce the number of logins in the future.
+	// Refresh token is stored in the server and always belongs to one user
+	// One user can have only one active refresh token at once.
+	// Refresh token always expires after 60 days.
+	// Refresh token can be revoked.
+
 	refreshToken, err := auth.MakeRefreshToken()
 	if err != nil {
 		respondWithError(w, "Unexpected error when logging in the user", http.StatusInternalServerError, err)
 		return
 	}
-	// Refresh token is stored in the server and always beongs to one user
-	// One user can have only one active refresh token at once.
 
-	// Refresh token always expires after 60 days.
-	// Refresh token can be revoked.
+	// Possibly separate function in auth which responsibility is to store the refresh token.
+	refreshTokenLifetime := time.Hour * 24 * 60
+	err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		ExpiresAt: time.Now().UTC().Add(refreshTokenLifetime),
+		UserID:    dbUser.ID,
+	})
+
+	if err != nil {
+		respondWithError(w, "Unexpected error when logging in the user", http.StatusInternalServerError, err)
+		return
+	}
 
 	respondWithJSON(w, http.StatusOK, loginReponse{
 		ID:           dbUser.ID,
