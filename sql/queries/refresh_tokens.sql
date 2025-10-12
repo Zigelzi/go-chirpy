@@ -9,3 +9,14 @@ INSERT INTO
     )
 VALUES
     ($1, $2, $3, NOW(), NOW());
+
+-- name: RevokeRefreshTokenByUserId :execrows
+UPDATE refresh_tokens
+SET
+    updated_at = NOW(),
+    revoked_at = NOW()
+WHERE
+    user_id = $1
+    AND revoked_at IS NULL
+RETURNING
+    *;

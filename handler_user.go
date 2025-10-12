@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -137,6 +138,16 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// One user can have only one active refresh token at once.
 	// Refresh token always expires after 60 days.
 	// Refresh token can be revoked.
+
+	numberOfRevokedTokens, err := cfg.db.RevokeRefreshTokenByUserId(r.Context(), dbUser.ID)
+	if err != nil {
+		respondWithError(w, "Unexpected error when logging in the user", http.StatusInternalServerError, err)
+		return
+	}
+
+	if numberOfRevokedTokens > 0 {
+		log.Printf("Revoked %d existing token(s) from user %s", numberOfRevokedTokens, dbUser.Email)
+	}
 
 	refreshToken, err := auth.MakeRefreshToken()
 	if err != nil {
