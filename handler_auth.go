@@ -76,6 +76,7 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		You can get refresh token in the response, when you log in.
 		Refresh token is stored in the database.
 		Refresh tokens always expire in 60 days.
+		You can no longed provide the optional duration for access token.
 		Access tokens always expire in 1 hour.
 		User can have multiple active refresh tokens.
 		Refresh tokens always belong to only one user.
