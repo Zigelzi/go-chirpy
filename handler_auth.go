@@ -69,15 +69,6 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Task: Add endpoint to refresh the access token with refresh token
 		Task: Add endpoint to revoke the refresh token
 	*/
-	numberOfRevokedTokens, err := cfg.db.RevokeRefreshTokenByUserId(r.Context(), dbUser.ID)
-	if err != nil {
-		respondWithError(w, "Unexpected error when logging in the user", http.StatusInternalServerError, err)
-		return
-	}
-
-	if numberOfRevokedTokens > 0 {
-		log.Printf("Revoked %d existing token(s) from user %s", numberOfRevokedTokens, dbUser.Email)
-	}
 
 	/*
 		Task: Create new refresh token for an user when they log in and return it in the response.
