@@ -52,7 +52,7 @@ func main() {
 		),
 	)
 
-	// API routes
+	// Health check
 	mux.Handle("GET /api/healthz", middlewareLogging(http.HandlerFunc(handleHealth)))
 
 	// Chirps
