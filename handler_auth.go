@@ -54,12 +54,21 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// User gets refresh token to reduce the number of logins in the future.
-	// Refresh token is stored in the server and always belongs to one user
-	// One user can have only one active refresh token at once.
-	// Refresh token always expires after 60 days.
-	// Refresh token can be revoked.
+	/*
+		Story: User can log out from the system
+		---
 
+		You can stay logged in for 60 days on same client without needing to login again.
+		You can stay logged in log in from multiple clients.
+		You can get feedback in the API if something goes wrong when creating the refresh token
+		in login.
+		You can log out from the service.
+		You can't access the authorized parts of the systems with the same client after logging out.
+
+		Task: Add creating and returning a refresh token for an user when they log in
+		Task: Add endpoint to refresh the access token with refresh token
+		Task: Add endpoint to revoke the refresh token
+	*/
 	numberOfRevokedTokens, err := cfg.db.RevokeRefreshTokenByUserId(r.Context(), dbUser.ID)
 	if err != nil {
 		respondWithError(w, "Unexpected error when logging in the user", http.StatusInternalServerError, err)
@@ -70,6 +79,19 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Revoked %d existing token(s) from user %s", numberOfRevokedTokens, dbUser.Email)
 	}
 
+	/*
+		Task: Create new refresh token for an user when they log in and return it in the response.
+		---
+		You can get refresh token in the response, when you log in.
+		Refresh token is stored in the database.
+		Refresh tokens always expire in 60 days.
+		Access tokens always expire in 1 hour.
+		User can have multiple active refresh tokens.
+		Refresh tokens always belong to only one user.
+		Refresh tokens get deleted from database when the user is deleted.
+		You can get feedback in the API if something goes wrong when creating the refresh token
+		in login.
+	*/
 	refreshToken, err := auth.MakeRefreshToken()
 	if err != nil {
 		respondWithError(w, "Unexpected error when logging in the user", http.StatusInternalServerError, err)
@@ -101,8 +123,9 @@ func (cfg *apiConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 func (cfg *apiConfig) handleRefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	/*
-		User can get new access token with valid refresh token.
+		Task: Create new endpoint to refresh the access token.
 		--
+
 		You need to provide refresh token in the Authorization request header.
 		You can get new access token in the response body, when the refresh token is valid
 		Valid refresh token exists in the DB, is not expired and is not revoked.
@@ -141,8 +164,8 @@ func (cfg *apiConfig) handleRefreshAccessToken(w http.ResponseWriter, r *http.Re
 
 func (cfg *apiConfig) handleRevokeRefreshToken(w http.ResponseWriter, r *http.Request) {
 	/*
-		User can revoke the refresh token (log out from all devices).
-
+		Task: Add endpoint to revoke the refresh token
+		---
 		You need to provide refresh token in the Authorization header.
 		Active refresh token is revoked, if it exists in database.
 		You can't use revoked refresh token to generate new access tokens.
