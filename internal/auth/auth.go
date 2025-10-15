@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrNoAuthorizationHeader      = errors.New("header is missing authorization key")
+	ErrNoAuthorizationHeader      = errors.New("header is missing authorization key or value")
 	ErrNoAuthorizationCredentials = errors.New("authorization header is missing credentials")
 	ErrNoAuthorizationType        = errors.New("authorization header is missing type")
 )
