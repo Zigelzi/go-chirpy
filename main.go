@@ -62,6 +62,7 @@ func main() {
 
 	// Users
 	mux.Handle("POST /api/users", middlewareLogging(http.HandlerFunc(cfg.handleCreateUser)))
+	mux.Handle("PUT /api/users", middlewareLogging(http.HandlerFunc(cfg.handleUpdateUserCredentials)))
 
 	// Authentication
 	mux.Handle("POST /api/login", middlewareLogging(http.HandlerFunc(cfg.handleLogin)))
