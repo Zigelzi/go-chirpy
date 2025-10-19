@@ -89,8 +89,28 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 	}
 	authToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		respondWithError(w, "Authorization token is missing", http.StatusBadRequest, err)
-		return
+		switch err {
+		case auth.ErrNoAuthorizationHeader:
+			{
+				respondWithError(w, "Authorization header is missing", http.StatusUnauthorized, err)
+				return
+			}
+		case auth.ErrNoAuthorizationType:
+			{
+				respondWithError(w, "Authorization header is not in Bearer <credentials> format", http.StatusUnauthorized, err)
+				return
+			}
+		case auth.ErrNoAuthorizationCredentials:
+			{
+				respondWithError(w, "Authorization header is missing creadentials", http.StatusUnauthorized, err)
+				return
+			}
+		default:
+			{
+				respondWithError(w, "Internal server error when parsing Authorization header", http.StatusInternalServerError, err)
+				return
+			}
+		}
 	}
 	userUUID, err := auth.ValidateJWT(authToken, cfg.jwtSecret)
 	if err != nil {
