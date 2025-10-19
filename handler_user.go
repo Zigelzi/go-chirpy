@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -12,6 +11,13 @@ import (
 	"github.com/Zigelzi/go-chirpy/internal/database"
 	"github.com/google/uuid"
 )
+
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+}
 
 func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	type requestData struct {
@@ -96,15 +102,26 @@ func (cfg *apiConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http
 	/*
 		User can update their login credentials
 		---
-		You need to provide valid access token in the Authorization header.
-		You need to provide new email and password to be changed.
-		You can only change your own credentials.
+		x You need to provide valid access token in the Authorization header.
+		x You need to provide new email and password to be changed.
+		You can get feedback if you don't provide new email and password.
+
+		You need to provide email in valid email format
+		You can get feedback when you provide email in invalid format.
+
+		You need to provide password that meets the system password stength requirements.
+		You can get feedback about insufficient password strenth, when you submit password that
+		is too weak.
+
+		You can only change your own credentials, so user UUID contained in the access token.
+
+		You get error about unauthorized use, if you try to change credentials of somebody else.
+
 		You can only use the new email and password to login, when you successfully change
 		your credentials.
 		You can get the the updated user details without password in the response, when you update
 		the credentials successfully.
 
-		You get error about unauthorized use, if you try to change credentials of somebody else.
 	*/
 	type changeCredentialsRequest struct {
 		Email    string `json:"email"`
@@ -116,17 +133,17 @@ func (cfg *apiConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http
 		switch err {
 		case auth.ErrNoAuthorizationHeader:
 			{
-				respondWithError(w, "Authorization header is missing", http.StatusBadRequest, err)
+				respondWithError(w, "Authorization header is missing", http.StatusUnauthorized, err)
 				return
 			}
 		case auth.ErrNoAuthorizationType:
 			{
-				respondWithError(w, "Authorization header is not in Bearer <credentials> format", http.StatusBadRequest, err)
+				respondWithError(w, "Authorization header is not in Bearer <credentials> format", http.StatusUnauthorized, err)
 				return
 			}
 		case auth.ErrNoAuthorizationCredentials:
 			{
-				respondWithError(w, "Authorization header is missing creadentials", http.StatusBadRequest, err)
+				respondWithError(w, "Authorization header is missing creadentials", http.StatusUnauthorized, err)
 				return
 			}
 		default:
@@ -142,7 +159,6 @@ func (cfg *apiConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http
 		return
 	}
 
-	fmt.Printf("UserID: %v\n", userId)
 	decoder := json.NewDecoder(r.Body)
 	credentialsData := changeCredentialsRequest{}
 	err = decoder.Decode(&credentialsData)
@@ -150,5 +166,33 @@ func (cfg *apiConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http
 		respondWithError(w, "Invalid JSON in the request body", http.StatusBadRequest, err)
 		return
 	}
-	fmt.Println(credentialsData)
+
+	newHashedPassword, err := auth.HashPassword(credentialsData.Password)
+	if err != nil {
+		respondWithError(w, "Internal server error. Credentials weren't updated.", http.StatusInternalServerError, err)
+		return
+	}
+
+	updatedCredentials, err := cfg.db.UpdateUserCredentials(r.Context(), database.UpdateUserCredentialsParams{
+		ID:             userId,
+		Email:          credentialsData.Email,
+		HashedPassword: newHashedPassword,
+	})
+
+	if err != nil {
+		respondWithError(w, "Internal server error. Credentials weren't updated.", http.StatusInternalServerError, err)
+		return
+	}
+
+	type changeCredentialsResponse struct {
+		User
+	}
+	respondWithJSON(w, http.StatusOK, changeCredentialsResponse{
+		User: User{
+			ID:        updatedCredentials.ID,
+			UpdatedAt: updatedCredentials.UpdatedAt,
+			CreatedAt: updatedCredentials.CreatedAt,
+			Email:     updatedCredentials.Email,
+		},
+	})
 }
