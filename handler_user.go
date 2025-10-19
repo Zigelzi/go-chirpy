@@ -103,23 +103,22 @@ func (cfg *apiConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http
 		User can update their login credentials
 		---
 		x You need to provide valid access token in the Authorization header.
+		x You get error about unauthorized use, if you don't provide valid access token
 		x You need to provide new email and password to be changed.
-		You can get feedback if you don't provide new email and password.
+		x You can get feedback if you don't provide new email and password.
 
-		You need to provide email in valid email format
-		You can get feedback when you provide email in invalid format.
+		x You need to provide email in valid email format
+		x You can get feedback when you provide email in invalid format.
 
-		You need to provide password that meets the system password stength requirements.
-		You can get feedback about insufficient password strenth, when you submit password that
+		x You need to provide password that meets the system password stength requirements.
+		x You can get feedback about insufficient password strenth, when you submit password that
 		is too weak.
 
-		You can only change your own credentials, so user UUID contained in the access token.
+		x You can only change your own credentials, so user UUID contained in the access token.
 
-		You get error about unauthorized use, if you try to change credentials of somebody else.
-
-		You can only use the new email and password to login, when you successfully change
+		x You can only use the new email and password to login, when you successfully change
 		your credentials.
-		You can get the the updated user details without password in the response, when you update
+		x You can get the the updated user details without password in the response, when you update
 		the credentials successfully.
 
 	*/
@@ -164,6 +163,26 @@ func (cfg *apiConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http
 	err = decoder.Decode(&credentialsData)
 	if err != nil {
 		respondWithError(w, "Invalid JSON in the request body", http.StatusBadRequest, err)
+		return
+	}
+
+	if strings.TrimSpace(credentialsData.Email) == "" {
+		respondWithError(w, "Email is required field", http.StatusBadRequest, nil)
+		return
+	}
+
+	if isInvalidEmail(credentialsData.Email) {
+		respondWithError(w, "Email not in 'example@domain.com' format", http.StatusBadRequest, nil)
+		return
+	}
+
+	if strings.TrimSpace(credentialsData.Password) == "" {
+		respondWithError(w, "Password is required field", http.StatusBadRequest, nil)
+		return
+	}
+
+	if isWeakPassword(credentialsData.Password) {
+		respondWithError(w, "Password is too weak", http.StatusBadRequest, nil)
 		return
 	}
 
