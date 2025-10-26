@@ -11,6 +11,8 @@ SELECT
     *
 FROM
     chirps
+WHERE
+    deleted_at is null
 ORDER BY
     created_at asc;
 
@@ -20,4 +22,16 @@ SELECT
 FROM
     chirps
 WHERE
-    id = $1;
+    id = $1
+    and deleted_at is null;
+
+-- name: DeleteChirp :one
+UPDATE chirps
+SET
+    deleted_at = NOW(),
+    updated_at = NOW()
+WHERE
+    id = $1
+    and deleted_at is null
+RETURNING
+    *;

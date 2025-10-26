@@ -59,6 +59,7 @@ func main() {
 	mux.Handle("POST /api/chirps", middlewareLogging(http.HandlerFunc(cfg.handleCreateChirp)))
 	mux.Handle("GET /api/chirps", middlewareLogging(http.HandlerFunc(cfg.handleGetAllChirps)))
 	mux.Handle("GET /api/chirps/{chirpID}", middlewareLogging(http.HandlerFunc(cfg.handleGetChirp)))
+	mux.Handle("DELETE /api/chirps/{chirpID}", middlewareLogging(http.HandlerFunc(cfg.handleDeleteChirp)))
 
 	// Users
 	mux.Handle("POST /api/users", middlewareLogging(http.HandlerFunc(cfg.handleCreateUser)))

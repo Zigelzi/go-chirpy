@@ -17,7 +17,7 @@ INSERT INTO
 VALUES
     ($1, $2, $3, NOW(), NOW())
 RETURNING
-    id, created_at, updated_at, body, user_id
+    id, created_at, updated_at, body, user_id, deleted_at
 `
 
 type CreateChirpParams struct {
@@ -35,17 +35,45 @@ func (q *Queries) CreateChirp(ctx context.Context, arg CreateChirpParams) (Chirp
 		&i.UpdatedAt,
 		&i.Body,
 		&i.UserID,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const deleteChirp = `-- name: DeleteChirp :one
+UPDATE chirps
+SET
+    deleted_at = NOW(),
+    updated_at = NOW()
+WHERE
+    id = $1
+    and deleted_at is null
+RETURNING
+    id, created_at, updated_at, body, user_id, deleted_at
+`
+
+func (q *Queries) DeleteChirp(ctx context.Context, id uuid.UUID) (Chirp, error) {
+	row := q.db.QueryRowContext(ctx, deleteChirp, id)
+	var i Chirp
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Body,
+		&i.UserID,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getChirp = `-- name: GetChirp :one
 SELECT
-    id, created_at, updated_at, body, user_id
+    id, created_at, updated_at, body, user_id, deleted_at
 FROM
     chirps
 WHERE
     id = $1
+    and deleted_at is null
 `
 
 func (q *Queries) GetChirp(ctx context.Context, id uuid.UUID) (Chirp, error) {
@@ -57,15 +85,18 @@ func (q *Queries) GetChirp(ctx context.Context, id uuid.UUID) (Chirp, error) {
 		&i.UpdatedAt,
 		&i.Body,
 		&i.UserID,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getChirps = `-- name: GetChirps :many
 SELECT
-    id, created_at, updated_at, body, user_id
+    id, created_at, updated_at, body, user_id, deleted_at
 FROM
     chirps
+WHERE
+    deleted_at is null
 ORDER BY
     created_at asc
 `
@@ -85,6 +116,7 @@ func (q *Queries) GetChirps(ctx context.Context) ([]Chirp, error) {
 			&i.UpdatedAt,
 			&i.Body,
 			&i.UserID,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}

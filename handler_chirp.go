@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -185,4 +186,89 @@ func sensorProfanities(text string, unallowedWords map[string]struct{}) string {
 	}
 	sensoredText := strings.Join(words, " ")
 	return sensoredText
+}
+
+func (cfg *apiConfig) handleDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	/*
+		User can delete their chirps
+
+		You need to provide the UUID of the chirp to be deleted in the path of the request.
+
+		You can only delete chirps that you are author of.
+		You receive unauthorized response, if you try to delete a chirp that you're not author of.
+		You get action successful response, when chirp has been deleted successfully.
+		You get action successful response, when you delete same chirp multiple times.
+
+		You can get feedback if you don't provide the ChirpID as valid UUID.
+		You can't get deleted chirps from the API, when you query for individual chirps.
+		You can't get deleted chirps from the API, when you query for all chirps.
+		Deleted chirps are still available in DB.
+	*/
+
+	pathChirpID := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(pathChirpID)
+	if err != nil {
+		respondWithError(w, "Parameter must be valid UUID", http.StatusBadRequest, err)
+		return
+	}
+
+	authToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		switch err {
+		case auth.ErrNoAuthorizationHeader:
+			{
+				respondWithError(w, "Authorization header is missing", http.StatusUnauthorized, err)
+				return
+			}
+		case auth.ErrNoAuthorizationType:
+			{
+				respondWithError(w, "Authorization header is not in Bearer <credentials> format", http.StatusUnauthorized, err)
+				return
+			}
+		case auth.ErrNoAuthorizationCredentials:
+			{
+				respondWithError(w, "Authorization header is missing creadentials", http.StatusUnauthorized, err)
+				return
+			}
+		default:
+			{
+				respondWithError(w, "Internal server error when parsing Authorization header", http.StatusInternalServerError, err)
+				return
+			}
+		}
+	}
+	userID, err := auth.ValidateJWT(authToken, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, "Invalid authorization token", http.StatusUnauthorized, err)
+		return
+	}
+
+	dbChirp, err := cfg.db.GetChirp(r.Context(), chirpID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			errorMessage := fmt.Sprintf("Chirp with ID %v was not found", chirpID)
+			respondWithError(w, errorMessage, http.StatusNotFound, nil)
+			return
+		}
+		respondWithError(w, "Failed to fetch the chirp with ID "+chirpID.String(), http.StatusInternalServerError, err)
+		return
+	}
+
+	if dbChirp.DeletedAt.Valid {
+		fmt.Printf("User %v attempted to delete chirp %v again. It is already deleted at %v\n", userID, chirpID, dbChirp.DeletedAt.Time)
+		respondWithJSON(w, http.StatusNoContent, struct{}{})
+		return
+	}
+
+	if dbChirp.UserID != userID {
+		respondWithError(w, "You can delete only your own chirps", http.StatusForbidden, nil)
+		return
+	}
+	deletedChirp, err := cfg.db.DeleteChirp(r.Context(), chirpID)
+	if err != nil && errors.Is(err, sql.ErrNoRows) == false {
+		respondWithError(w, "Failed to delete chirp with ID "+chirpID.String(), http.StatusInternalServerError, err)
+		return
+	}
+	fmt.Printf("User %v deleted chirp %v at %v\n", userID, chirpID, deletedChirp.DeletedAt.Time)
+	respondWithJSON(w, http.StatusNoContent, struct{}{})
 }
