@@ -13,10 +13,11 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
+	ID          uuid.UUID `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Email       string    `json:"email"`
+	IsChirpyRed bool      `json:"is_chirpy_red"`
 }
 
 func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
@@ -73,9 +74,10 @@ func (cfg *apiConfig) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	respondWithJSON(w, http.StatusCreated, createUserReponse{
 		User: User{ID: newUser.ID,
-			CreatedAt: newUser.CreatedAt,
-			UpdatedAt: newUser.UpdatedAt,
-			Email:     newUser.Email,
+			CreatedAt:   newUser.CreatedAt,
+			UpdatedAt:   newUser.UpdatedAt,
+			Email:       newUser.Email,
+			IsChirpyRed: newUser.IsChirpyRed,
 		}})
 }
 
@@ -205,10 +207,11 @@ func (cfg *apiConfig) handleUpdateUserCredentials(w http.ResponseWriter, r *http
 	}
 	respondWithJSON(w, http.StatusOK, changeCredentialsResponse{
 		User: User{
-			ID:        updatedCredentials.ID,
-			UpdatedAt: updatedCredentials.UpdatedAt,
-			CreatedAt: updatedCredentials.CreatedAt,
-			Email:     updatedCredentials.Email,
+			ID:          updatedCredentials.ID,
+			UpdatedAt:   updatedCredentials.UpdatedAt,
+			CreatedAt:   updatedCredentials.CreatedAt,
+			Email:       updatedCredentials.Email,
+			IsChirpyRed: updatedCredentials.IsChirpyRed,
 		},
 	})
 }

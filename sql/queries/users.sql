@@ -15,6 +15,17 @@ RETURNING
 -- name: ResetUsers :execrows
 DELETE FROM users;
 
+-- name: UserExists :one
+SELECT
+    EXISTS (
+        SELECT
+            id
+        FROM
+            users
+        where
+            id = $1
+    );
+
 -- name: GetUserByEmail :one
 SELECT
     *
@@ -33,3 +44,10 @@ WHERE
     id = $1
 RETURNING
     *;
+
+-- name: UpgradeUserToChirpyRed :exec
+UPDATE users
+SET
+    is_chirpy_red = true
+WHERE
+    id = $1;

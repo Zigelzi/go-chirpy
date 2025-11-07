@@ -54,3 +54,21 @@ func MakeRefreshToken() (string, error) {
 	hexToken := hex.EncodeToString(tokenBytes)
 	return hexToken, nil
 }
+
+func GetAPIKey(headers http.Header) (string, error) {
+	const authorizationType = "ApiKey"
+	authorizationHeader := headers.Get("Authorization")
+
+	if authorizationHeader == "" {
+		return "", ErrNoAuthorizationHeader
+	}
+	stringsInHeader := strings.Split(authorizationHeader, " ")
+	if stringsInHeader[0] != authorizationType {
+		return "", ErrNoAuthorizationType
+	}
+	if len(stringsInHeader) < 2 {
+		return "", ErrNoAuthorizationCredentials
+	}
+	tokenString := strings.TrimSpace(stringsInHeader[1])
+	return tokenString, nil
+}

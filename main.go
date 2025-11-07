@@ -1,45 +1,22 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
-	"os"
-	"sync/atomic"
 
-	"github.com/Zigelzi/go-chirpy/internal/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
-
-type apiConfig struct {
-	fileServerHits atomic.Int32
-	db             *database.Queries
-	env            string
-	jwtSecret      string
-}
 
 func main() {
 	address := ":8080"
 	godotenv.Load()
 
-	dbURL := os.Getenv("DB_URL")
-	db, err := sql.Open("postgres", dbURL)
+	db, err := initDB()
 	if err != nil {
-		log.Fatalf("unable to connect to database: %s", err)
+		log.Fatalf("initializing database failed: %v", err)
 	}
-
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		jwtSecret = "development-is-hard"
-	}
-	cfg := apiConfig{
-		fileServerHits: atomic.Int32{},
-		db:             database.New(db),
-		env:            os.Getenv("ENVIRONMENT"),
-		jwtSecret:      jwtSecret,
-	}
-	log.Printf("Starting server on address %s for environment [%s]", address, cfg.env)
+	cfg := initConfig(db)
 
 	mux := http.NewServeMux()
 
@@ -70,6 +47,9 @@ func main() {
 	mux.Handle("POST /api/refresh", middlewareLogging(http.HandlerFunc(cfg.handleRefreshAccessToken)))
 	mux.Handle("POST /api/revoke", middlewareLogging(http.HandlerFunc(cfg.handleRevokeRefreshToken)))
 
+	// External services
+	mux.Handle("POST /api/polka/webhooks", middlewareLogging(http.HandlerFunc(cfg.handlePolkaWebhook)))
+
 	// Admin routes
 	mux.Handle("GET /admin/metrics", middlewareLogging(http.HandlerFunc(cfg.handleMetrics)))
 	mux.Handle("POST /admin/reset", middlewareLogging(http.HandlerFunc(cfg.handleReset)))
@@ -78,5 +58,7 @@ func main() {
 		Handler: mux,
 		Addr:    address,
 	}
+
+	log.Printf("Starting server on address %s for environment [%s]", address, cfg.env)
 	server.ListenAndServe()
 }
