@@ -118,6 +118,15 @@ func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, "Invalid authorization token", http.StatusUnauthorized, err)
 		return
 	}
+	isExistingUser, err := cfg.db.UserExists(r.Context(), userUUID)
+	if err != nil {
+		respondWithError(w, "Failed to fetch the author of the chirp", http.StatusInternalServerError, err)
+		return
+	}
+	if isExistingUser == false {
+		respondWithError(w, "This user doesn't exist, chirp was not created", http.StatusBadRequest, nil)
+		return
+	}
 
 	decoder := json.NewDecoder(r.Body)
 	requestData := chirpRequestData{}
