@@ -60,15 +60,33 @@ func (cfg *apiConfig) handleGetAllChirps(w http.ResponseWriter, r *http.Request)
 		Chirps []Chirp `json:"chirps"`
 	}
 
-	// Service
-	dbChirps, err := cfg.db.GetChirps(r.Context())
-	if err != nil {
-		respondWithError(w, "Failed to get chirps", http.StatusInternalServerError, err)
+	dbChirps := []database.Chirp{}
+	authorIdParam := r.URL.Query().Get("author_id")
+	if authorIdParam == "" {
+		// Service
+		allChirps, err := cfg.db.GetChirps(r.Context())
+		if err != nil {
+			respondWithError(w, "Failed to get chirps", http.StatusInternalServerError, err)
+		}
+		dbChirps = allChirps
+
+	} else {
+		authorId, err := uuid.Parse(authorIdParam)
+		if err != nil {
+			respondWithError(w, "author_id must be valid UUID", http.StatusBadRequest, err)
+			return
+		}
+		chirpsByAuthor, err := cfg.db.GetChirpsByAuthorId(r.Context(), authorId)
+		if err != nil && errors.Is(err, sql.ErrNoRows) == false {
+			respondWithError(w, "Something went wrong when trying to fetch the chirps", http.StatusInternalServerError, err)
+			return
+		}
+		dbChirps = chirpsByAuthor
 	}
 
-	allChirps := []Chirp{}
+	allResponseChirps := []Chirp{}
 	for _, dbChirp := range dbChirps {
-		allChirps = append(allChirps, Chirp{
+		allResponseChirps = append(allResponseChirps, Chirp{
 			ID:        dbChirp.ID,
 			CreatedAt: dbChirp.CreatedAt,
 			UpdatedAt: dbChirp.UpdatedAt,
@@ -77,7 +95,7 @@ func (cfg *apiConfig) handleGetAllChirps(w http.ResponseWriter, r *http.Request)
 		})
 	}
 
-	respondWithJSON(w, http.StatusOK, allChirps)
+	respondWithJSON(w, http.StatusOK, allResponseChirps)
 }
 
 func (cfg *apiConfig) handleCreateChirp(w http.ResponseWriter, r *http.Request) {

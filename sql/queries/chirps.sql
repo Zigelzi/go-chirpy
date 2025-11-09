@@ -16,6 +16,17 @@ WHERE
 ORDER BY
     created_at asc;
 
+-- name: GetChirpsByAuthorId :many
+SELECT
+    *
+FROM
+    chirps
+WHERE
+    deleted_at is null
+    AND user_id = $1
+ORDER BY
+    created_at asc;
+
 -- name: GetChirp :one
 SELECT
     *
