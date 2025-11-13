@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -76,12 +77,23 @@ func (cfg *apiConfig) handleGetAllChirps(w http.ResponseWriter, r *http.Request)
 			respondWithError(w, "author_id must be valid UUID", http.StatusBadRequest, err)
 			return
 		}
+
+		// Service
 		chirpsByAuthor, err := cfg.db.GetChirpsByAuthorId(r.Context(), authorId)
 		if err != nil && errors.Is(err, sql.ErrNoRows) == false {
 			respondWithError(w, "Something went wrong when trying to fetch the chirps", http.StatusInternalServerError, err)
 			return
 		}
 		dbChirps = chirpsByAuthor
+	}
+
+	sortParam := r.URL.Query().Get("sort")
+	if sortParam == "asc" {
+		sort.Slice(dbChirps, func(i, j int) bool { return dbChirps[i].CreatedAt.Before(dbChirps[j].CreatedAt) })
+	}
+	if sortParam == "desc" {
+		fmt.Println("desc")
+		sort.Slice(dbChirps, func(i, j int) bool { return dbChirps[i].CreatedAt.After(dbChirps[j].CreatedAt) })
 	}
 
 	allResponseChirps := []Chirp{}
